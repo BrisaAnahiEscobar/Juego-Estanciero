@@ -1,0 +1,362 @@
+import src.Estrategias.*
+import src.empresa.*
+import src.campos.*
+import src.Propiedad.*
+import src.provincia.*
+import src.jugador.*
+import src.salida.*
+import src.premioGanadero.*
+import src.dado.*
+import src.prision.*
+import src.Tablero.*
+import src.Juego.*
+import src.banco.*
+
+describe "Estanciero Test" {
+    test "True es true" {
+        assert.that(true)
+    }
+
+////////// PUNTO 1A ////////////
+    test "Probando si funciona el requerimiento 1a" {
+      assert.equals(1, chaco.propietariosSinRepetidos().size())
+    }
+
+////////// PUNTO 1B ////////////
+    test "Agregar una estancia en un campo validando que se pueda construir" { 
+      const chaco2 = new Provincia()
+      const campo4 = new Campos(compraInicial = 5, provincia = chaco2)
+      const campo5 = new Campos(compraInicial = 5, provincia = chaco2)
+      const campo6 = new Campos(compraInicial = 5, provincia = chaco2)
+      
+      chaco2.campos(campo4)
+      chaco2.campos(campo5)
+      chaco2.campos(campo6)
+      
+      const unaPersona = new Jugador(dinero = 15)
+      
+      unaPersona.comprarPropiedad(campo4)
+      unaPersona.comprarPropiedad(campo5)
+      unaPersona.comprarPropiedad(campo6)
+      campo4.agregarEstancia()
+      
+      assert.equals(1, campo4.cantidadDeEstancias())
+      assert.equals(3, unaPersona.propiedades().size())
+      assert.equals(0, unaPersona.dinero())
+    }
+
+////////// PUNTO 2A ////////////   
+    test "Hacer que las propiedades entiendan el mensaje sos Empresa()" {
+      const campo = new Campos()
+      const empresa = new Empresa()
+
+      assert.notThat(campo.sosEmpresa())
+      assert.that(empresa.sosEmpresa())
+    }
+
+////////// PUNTO 2B ////////////
+    test "Saber la cantidad de empresas que tiene un jugador" {
+      const jugador1 = new Jugador(propiedades = #{campo1, campo2})
+      const jugador2 = new Jugador(propiedades = #{})
+      const empresa = new Empresa() 
+      const jugador3 = new Jugador(propiedades = #{campo1, empresa})
+
+      assert.equals(0, jugador1.cantidadDeEmpresas())
+      assert.equals(0, jugador2.cantidadDeEmpresas())
+      assert.equals(1, jugador3.cantidadDeEmpresas())
+    }
+
+////////// PUNTO 3 ////////////
+    test "Tirar los dados" {
+      const jugador = new Jugador()
+      
+      jugador.tirarDados()
+      
+      assert.equals(2, jugador.tirarDados())
+    }
+
+////////// PUNTO 4 ////////////
+    test "Hacer que las propiedades entiendan el mensaje rentaPara(unJugador) caso para un campo" {
+      const unJugador = new Jugador()
+      const otroJugador = new Jugador()
+      const unCampo = new Campos(cantidadDeEstancias = 3, valorDeRentaFijo = 3000, dueño = otroJugador)
+      
+      assert.equals(24000, unCampo.rentaPara(unJugador))
+    }
+
+////////// PUNTO 5 ////////////
+    test "Hacer que un jugador pague una suma de dinero a un acreedor si no tiene dinero suficiente se debe lanzar un error"{
+      const jugador1 = new Jugador(dinero = 1000)
+      const jugador2 = new Jugador(dinero = 1500)
+
+      jugador1.pagar(1000, jugador2) 
+      
+      assert.equals(0, jugador1.dinero())
+      assert.equals(2500, jugador2.dinero())
+    
+      jugador2.pagar(2000, jugador1)
+      
+      assert.throwsExceptionWithMessage("No tiene dinero suficiente", { jugador2.pagar(2500, jugador1) })
+    }
+
+////////// PUNTO 6 ////////////
+    test "Hacer que un casillero entienda el mensaje paso(unJugador)"{
+      const unJugador = new Jugador(dinero = 0)
+      
+      salida.paso(unJugador)
+      
+      assert.equals(5000, unJugador.dinero())
+    }
+
+////////// PUNTO 7 ////////////
+    test "Hacer que cualquier casillero entienda el mensaje cayo(unJugador), en caso caiga en un premioGanadero"{
+      const pepe = new Jugador(dinero = 0, casilleroActual = premioGanadero)
+      
+      premioGanadero.cayo(pepe)
+      
+      assert.equals(2500, pepe.dinero())
+    }
+
+    test "Hacer que cualquier casillero entienda el mensaje cayo(unJugador), en caso caiga en la salida"{
+      const pepe = new Jugador(dinero = 0, casilleroActual = salida)
+      
+      salida.cayo(pepe)
+      
+      assert.equals(0, pepe.dinero())
+    }
+
+    test "Hacer que cualquier casillero entienda el mensaje cayo(unJugador), en caso caiga en un campo y el dueño es el banco"{
+      const unCampo = new Campos(compraInicial = 10)
+      const jugador1 = new Jugador(dinero = 100, casilleroActual = unCampo)
+      
+      unCampo.cayo(jugador1)
+      
+      assert.equals(90, jugador1.dinero())
+    }
+
+    test "Hacer que cualquier casillero entienda el mensaje cayo(unJugador), en caso caiga en un campo y el dueño NO es el banco, sino que es otro jugador"{
+      const jugador2 = new Jugador(dinero = 0)
+      const unCampo = new Campos(cantidadDeEstancias = 2, valorDeRentaFijo = 10, dueño = jugador2)
+      const jugador1 = new Jugador(dinero = 100, casilleroActual = unCampo)
+      
+      unCampo.cayo(jugador1)
+      
+      assert.equals(60, jugador1.dinero())
+      assert.equals(40, jugador2.dinero())
+    }
+
+    test "Hacer que cualquier casillero entienda el mensaje cayo(unJugador), en caso caiga en una empresa y el dueño es el banco"{
+      const empresa1 = new Empresa(compraInicial = 10)
+      const jugador1 = new Jugador(dinero = 100, casilleroActual = empresa1)
+      
+      empresa1.cayo(jugador1)
+      
+      assert.equals(90, jugador1.dinero())
+    }
+
+    test "Hacer que cualquier casillero entienda el mensaje cayo(unJugador), en caso caiga en una empresa y el dueño NO es el banco, sino que es otro jugador"{
+      const jugador2 = new Jugador(dinero = 0)
+      const empresa1 = new Empresa(dueño = jugador2)
+      
+      jugador2.propiedades(empresa1)
+      
+      const jugador1 = new Jugador(dinero = 60100, casilleroActual = empresa1)
+      
+      empresa1.cayo(jugador1)
+      
+      assert.equals(100, jugador1.dinero())
+      assert.equals(60000, jugador2.dinero())
+    }
+
+////////// PUNTO 8 ////////////
+    test "Hacer que un jugador avance x casilleros que llegan por parametro" {
+      const casilleroSalida = salida
+      const casillero1 = new Campos() 
+      const casillero2 = new Campos()
+      const casillero3 = new Campos()
+      const casillero4 = new Empresa()
+      const casillero5 = new Empresa()
+      const casilleroPremioGanadero = premioGanadero
+      const tablero = new Tablero(casilleros = [casilleroSalida, casillero1, casillero2, casillero3, casillero4, casillero5, casilleroPremioGanadero])
+      const jugador = new Jugador(casilleroActual = casilleroSalida)
+
+      jugador.moverse(4, tablero)
+  
+      assert.equals(casillero4, jugador.casilleroActual())
+    }
+
+////////// PUNTO 9 ////////////
+    test "Hacer que un jugador juegue"{
+      const jugador = new Jugador(casilleroActual = salida)
+      const juego = new Juego(jugadores = [jugador])
+
+      juego.queJuegue(jugador)
+      
+      assert.equals(campo1, jugador.casilleroActual())
+    }
+
+////////// PRISION ////////////
+    test "Hacer que un jugador vaya a prision"{
+      const jugador = new Jugador(casilleroActual = salida)
+      
+      jugador.turnosEnPrision(0) 
+      jugador.irPreso()
+      
+      assert.equals(prision, jugador.casilleroActual())
+      assert.that(jugador.estaPreso())
+      assert.equals(3, jugador.turnosEnPrision())
+    }
+    
+    test "Hacer que un jugador vaya a prision otro casillero"{
+      const jugador = new Jugador(casilleroActual = premioGanadero)
+      
+      jugador.turnosEnPrision(0) 
+      jugador.irPreso()
+      
+      assert.equals(prision, jugador.casilleroActual())
+      assert.that(jugador.estaPreso())
+      assert.equals(3, jugador.turnosEnPrision())
+    }
+
+////////// HIPOTECA ////////////
+    test "Pruebo si funciona el metodo hipotecar" {
+      const pepe = new Jugador() 
+      const empresa1 = new Empresa(dueño = pepe, compraInicial = 10)
+      const empresa2 = new Empresa(dueño = pepe, compraInicial = 10)
+      const campo1 =  new Campos(dueño = pepe, compraInicial = 10)
+      
+      pepe.propiedades(empresa1)
+      pepe.propiedades(empresa2)
+      pepe.propiedades(campo1)
+      pepe.hipotecarPropiedad(30)
+      
+      assert.equals(0, pepe.propiedades().size())
+    }
+
+    test "Testeo de Pagar hipotecando todo lo que tiene" {
+      const pepe = new Jugador() 
+      const pepo = new Jugador() 
+      const empresa1 = new Empresa(dueño = pepe, compraInicial = 10)
+      const empresa2 = new Empresa(dueño = pepe, compraInicial = 10)
+      const campo1 =  new Campos(dueño = pepe, compraInicial = 10, cantidadDeEstancias = 1, costoDeConstruccion = 10)
+      
+      pepe.propiedades(empresa1)
+      pepe.propiedades(empresa2)
+      pepe.propiedades(campo1)
+      
+      assert.throwsExceptionWithMessage("No tiene dinero suficiente", { pepe.pagar(300, pepo) })
+    } 
+
+////////// ESTRATEGIAS ////////////
+    test "Estrategia Estandar" {
+      const jugador = new Jugador(dinero = 50000, casilleroActual = salida)
+      const casilleroSalida = salida
+      const casillero1 = new Campos(compraInicial = 1000)
+      const casillero2 = new Campos(compraInicial = 2000)
+      const casillero3 = new Campos(compraInicial = 3000)
+      const casillero4 = new Empresa(compraInicial = 4000)
+      const casillero5 = new Empresa(compraInicial = 5000)
+      const casilleroPremioGanadero = premioGanadero
+      const tablero = new Tablero(casilleros = [casilleroSalida, casillero1, casillero2, casillero3, casillero4, casillero5, casilleroPremioGanadero])
+    
+      jugador.moverse(3, tablero)
+      
+      assert.equals(1, jugador.cantidadPropiedades())
+    }
+
+    test "Estrategia Garca, si cae en un campo"{
+      const jugador = new Jugador(dinero = 50000, casilleroActual = salida)
+      const casilleroSalida = salida
+      const casillero1 = new Campos(compraInicial = 1000)
+      const casillero2 = new Campos(compraInicial = 2000)
+      const casillero3 = new Campos(compraInicial = 3000)
+      const casillero4 = new Empresa(compraInicial = 4000)
+      const casillero5 = new Empresa(compraInicial = 5000)
+      const casilleroPremioGanadero = premioGanadero
+      const otroJugador = new Jugador(propiedades = #{casillero1})
+      const provincia = new Provincia(campos = #{casillero1, casillero2, casillero3})
+      const tablero = new Tablero(casilleros = [casilleroSalida, casillero1, casillero2, casillero3, casillero4, casillero5, casilleroPremioGanadero])
+
+      casillero3.provincia(provincia)
+      casillero1.dueño(otroJugador)
+      jugador.cambiarEstrategia(garca)
+      jugador.moverse(3, tablero)
+      
+      assert.equals(1, jugador.cantidadPropiedades())
+    }
+
+    test "Estrategia Garca, si cae en una empresa"{
+      const jugador = new Jugador(dinero = 50000, casilleroActual = salida)
+      const casilleroSalida = salida
+      const casillero1 = new Campos(compraInicial = 1000)
+      const casillero2 = new Campos(compraInicial = 2000)
+      const casillero3 = new Campos(compraInicial = 3000)
+      const casillero4 = new Empresa(compraInicial = 4000)
+      const casillero5 = new Empresa(compraInicial = 5000)
+      const casilleroPremioGanadero = premioGanadero
+      const otroJugador = new Jugador(propiedades = #{casillero5})
+      const tablero = new Tablero(casilleros = [casilleroSalida, casillero1, casillero2, casillero3, casillero4, casillero5, casilleroPremioGanadero])
+    
+      casillero5.dueño(otroJugador)
+      jugador.cambiarEstrategia(garca)
+      jugador.moverse(4, tablero)
+      
+      assert.equals(1, jugador.cantidadPropiedades())
+    }
+
+    test "Estrategia Imperialista, si cae en un campo, en caso tuviera otro campo de la provincia"{
+      const jugador = new Jugador(dinero = 50000, casilleroActual = salida)
+      const casilleroSalida = salida
+      const casillero1 = new Campos(compraInicial = 1000)
+      const casillero2 = new Campos(compraInicial = 2000)
+      const casillero3 = new Campos(compraInicial = 3000)
+      const casillero4 = new Empresa(compraInicial = 4000)
+      const casillero5 = new Empresa(compraInicial = 5000)
+      const casilleroPremioGanadero = premioGanadero
+      const provincia = new Provincia(campos = #{casillero1, casillero2, casillero3})
+      const tablero = new Tablero(casilleros = [casilleroSalida, casillero1, casillero2, casillero3, casillero4, casillero5, casilleroPremioGanadero])
+    
+      casillero3.provincia(provincia)
+      jugador.propiedades(casillero1)
+      jugador.cambiarEstrategia(imperialista)
+      jugador.moverse(3, tablero)
+    
+      assert.equals(2, jugador.cantidadPropiedades())
+    }
+
+    test "Estrategia Imperialista, si cae en un campo, en caso hubiera monopolio del banco"{
+      const jugador = new Jugador(dinero = 50000, casilleroActual = salida)
+      const casilleroSalida = salida
+      const casillero1 = new Campos(compraInicial = 1000)
+      const casillero2 = new Campos(compraInicial = 2000)
+      const casillero3 = new Campos(compraInicial = 3000)
+      const casillero4 = new Empresa(compraInicial = 4000)
+      const casillero5 = new Empresa(compraInicial = 5000)
+      const casilleroPremioGanadero = premioGanadero
+      const provincia = new Provincia(campos = #{casillero1, casillero2, casillero3})
+      const tablero = new Tablero(casilleros = [casilleroSalida, casillero1, casillero2, casillero3, casillero4, casillero5, casilleroPremioGanadero])
+    
+      casillero3.provincia(provincia)
+      jugador.cambiarEstrategia(imperialista)
+      jugador.moverse(3, tablero)
+      
+      assert.equals(1, jugador.cantidadPropiedades())
+    }
+
+    test "Estrategia Imperialista, si cae en una empresa"{
+      const jugador = new Jugador(dinero = 50000, casilleroActual = salida)
+      const casilleroSalida = salida
+      const casillero1 = new Campos(compraInicial = 1000)
+      const casillero2 = new Campos(compraInicial = 2000)
+      const casillero3 = new Campos(compraInicial = 3000)
+      const casillero4 = new Empresa(compraInicial = 4000)
+      const casillero5 = new Empresa(compraInicial = 5000)
+      const casilleroPremioGanadero = premioGanadero
+      const tablero = new Tablero(casilleros = [casilleroSalida, casillero1, casillero2, casillero3, casillero4, casillero5, casilleroPremioGanadero])
+
+      jugador.cambiarEstrategia(imperialista)
+      jugador.moverse(4, tablero)
+      
+      assert.equals(1, jugador.cantidadPropiedades())
+    }
+}
